@@ -4,10 +4,11 @@ FLOP
 The FLOP filesystem is designed for the use with the Mackapar 3.5" Floppy Drive (M35FD).
 
 
-[Specification:](https://gist.github.com/S0lll0s/5446051#file-flop-specification-draft-1)
+Specification [*(gist)*](https://gist.github.com/S0lll0s/5446051#file-flop-specification-draft-1)
+=============
 
 Introduction
-============
+------------
  
 The FLOP filesystem is designed for the use with the Mackapar 3.5" Floppy Drive (M35FD).
 The M35FD consists of 1440 sectors of 512 words each (737,280 words total).
@@ -19,6 +20,7 @@ Blocks are allocated back-to-front, to reduce collision between the file list an
  
 Header
 ------
+```
  +----------+------------------------------------+
  |   size   |   description                      |
  +----------+------------------------------------+
@@ -43,10 +45,11 @@ Header
  |  512 w   . file list (alphabetic order)       |     .- blocks 4 .. n
  |  512 w   | file list (alphabetic order)       |  ---/
  |__________|____________________________________|
-  
+ ``` 
  
 Block list entry
 ----------------
+``` 
  +------+----------------------------------+
  | size |   description                    |
  +------+----------------------------------+
@@ -68,10 +71,11 @@ Block list entry
  |      |    2: blocklist, 3: filelist     |
  |      |    4: data                       |
  |______|__________________________________|
- 
+``` 
  
 File list entry
 ---------------
+```
  +----------+----------------------------------+
  |   size   |   description                    |
  +----------+----------------------------------+
@@ -90,12 +94,12 @@ File list entry
  |          |    |  +-- [is block filled?]     | Better not implement that, really sucks for usability
  |          |    +-- unused                    |
  |__________|__________________________________|
- 
+ ``` 
  
 Untested code snippets
 ----------------------
  getting info about a block X (ex. 258):
-  
+```
   SET B, X     ; B, X = 258
   MOD B, 256   ; B = 2
   SUB X, B     ; X = 256
@@ -115,3 +119,4 @@ Untested code snippets
   SHR B, 12    ; shift to type only
   IFE B, 0
      JSR sth   ; block isn't used
+```
