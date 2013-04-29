@@ -1,0 +1,224 @@
+; *************************
+; Project: FLOP
+; File: FLOP.dasm
+; *************************
+;
+; Reads the sample floppy
+;
+; Either create a sample floppy with FLOPTest,
+; or load FLOPTest.bin.
+
+:_main
+	SET C, hwenum_targets
+ 	SET Y, 5
+	JSR _hwenum
+    
+    SET A, 3
+    SET B, 2          ; interrupts with message 2 mean key event
+    HWI [keyboard_id]
+    
+	SET A, 0
+	SET B, 0x8000     ; map screen to 8000
+	HWI [lem1802_id]
+    
+    SET A, 1
+    SET X, 0x35
+    HWI [m35fd_id]    ; interrupt 0x35 means floppy state change
+    
+    IAS _flop_interrupt
+    
+	SET [0x8000], 0x2041
+
+_flop_loop:
+	ADD X, 1
+ 	SET PC, _flop_loop
+    
+:_flop_interrupt
+	IFN A, 0x35
+		IFN A, 2
+			RFI 0
+			
+	IFE A, 0x35
+		JSR _flop_state_change
+	
+	SET A, 0
+	HWI [m35fd_id]    ; poll
+	
+	IFN B, 0x0001
+		RFI 0
+	IFE [_flop_loading], 0
+		SET PC, _flop_load
+	IFE [_flop_loading], 1
+		SET PC, _flop_print
+	IFE [_flop_loading], 2
+		SET PC, _flop_print_file
+	RFI 0
+	
+:_flop_state_change
+	SET J, _flop_stfu
+	SET I, 0x8040
+	SET B, 0xf000
+	JSR _scr_packed_string ; clear text
+	
+	SET A, 0
+	HWI [m35fd_id]    ; poll
+	
+	IFN C, 0
+		SET Z, C
+	
+	IFE B, 0x0000
+		SET J, _flop_no_media
+	IFE B, 0x0001
+		SET J, _flop_ready
+	IFE B, 0x0002
+		SET J, _flop_ready_wp
+	IFE B, 0x0003
+		SET J, _flop_busy
+	SET I, 0x8040
+	SET B, 0xf000
+	JSR _scr_packed_string
+	SET PC, POP
+	
+:_flop_load
+	SET [0x8001], 0x4042
+	
+	SET A, 2
+	SET X, 6
+	SET Y, _flop_space
+	HWI [m35fd_id]
+	
+	ADD [_flop_loading], 1
+	RFI 0
+	
+:_flop_print
+	SET [0x8002], 0x3043
+	
+	SET Y, _flop_space
+	ADD Y, 512
+	
+	SET J, _flop_space
+	SET C, 0
+:_flop_print_oloop
+	SET I, C
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET B, 0xf000
+	JSR _scr_packed_string
+	
+	
+	ADD J, 1
+	; file size
+	ADD J, 1
+	SET Z, 0
+	SET X, [J] ; #blocks
+	
+	ADD J, 1
+	SET Z, 0
+
+:_flop_print_loop
+	IFE C, 2
+		SET PC, _flop_skip
+	
+	; do something with sector [J+Z]
+	SET PUSH, X
+	SET PUSH, C
+	SET PUSH, B
+
+:_flop_print_wait_ready	
+	SET A, 0
+	HWI [m35fd_id]
+	
+	IFN B, 0x0001
+		SET PC, _flop_print_wait_ready
+	
+	SET A, 2
+	SET X, J
+	ADD X, Z
+	SET X, [X]
+	HWI [m35fd_id]
+	
+	SET B, POP
+	SET C, POP
+	SET X, POP
+
+	ADD Z, 1
+	ADD Y, 512
+	IFN Z, X
+		SET PC, _flop_print_loop
+:_flop_skip	
+	IFE C, 1
+		SET PC, _flop_print_end
+			
+	ADD J, X
+	ADD Y, 0x20
+	ADD C, 1
+	SET PC, _flop_print_oloop
+	
+:_flop_print_end
+	ADD [_flop_loading], 1
+	RFI 0
+	
+:_flop_print_file
+	SET [0x8003], 0x5044
+	
+	SET J, _flop_space
+	ADD J, 512
+	SET I, 0x8100
+	SET B, 0x2000
+	JSR _scr_packed_string
+	
+	ADD [_flop_loading], 1
+	
+	RFI 0
+
+:_flop_loading DAT 0
+:_flop_no_media DAT 0x4e6f, 0x206d, 0x6564, 0x6961, 0
+:_flop_ready DAT 0x5265, 0x6164, 0x7900, 0
+:_flop_ready_wp DAT 0x5265, 0x6164, 0x7920, 0x2857, 0x5029, 0
+:_flop_busy DAT 0x4275, 0x7379, 0
+:_flop_stfu DAT 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0
+
+
+; hardware enumeration
+:setup_keyboard
+            SET [keyboard_id], I   ; I holds the hardware ID, alternatively check hwenum_targets + 3
+            SET PC, POP            ; Identified handlers need to pop PC
+
+:setup_clock
+            SET [clock_id], I
+            SET PC, POP
+            
+:setup_lem1802
+    		SET [lem1802_id], I
+            SET PC, POP
+            
+:setup_m35fd
+    		SET [m35fd_id], I
+            SET PC, POP
+
+:setup_unknown
+    		SET [m35fd_id], I
+            SET PC, POP
+
+
+:keyboard_id DAT 0xffff
+:clock_id    DAT 0xffff
+:m35fd_id    DAT 0xffff
+:lem1802_id  DAT 0xffff
+
+:hwenum_targets
+	DAT setup_unknown                           ; Start with one word address to the unknown setup routine
+	DAT 0x30cf, 0x7406, 0xffff, setup_keyboard  ; one hardware setup is 4 words long
+	DAT 0x7349, 0xf615, 0xffff, setup_lem1802   ; Format: 4 higher ID bits, 4 lower ID bits, recognized
+	DAT 0x12d0, 0xb402, 0xffff, setup_clock     ; hardware ID (default 0xffff), last address to hwhandler
+	DAT 0x4fd5, 0x24c5, 0xffff, setup_m35fd
+	
+.include "hwenum.dasm"
+.include "screenutils.dasm"
+
+dat "PERN"
+:_flop_space
+.reserve 512
+.reserve 512
+.reserve 512
+	
