@@ -116,10 +116,10 @@ _flop_loop:
 	RFI 0
 
 :_flop_return
-	SET [0x8000], 0xf241
 	JSR _flop_load_file
 	JSR _flop_print_file
-	SET Y, 0
+	SET Y, 1
+	JSR _flop_uparrow
 	RFI 0
 
 :_flop_state_change
@@ -223,7 +223,6 @@ _flop_loop:
 		
 	SET Y, _flop_space + 512
 :_flop_load_segloop
-	SET [0x800f], 0x4646
 	
 	SET A, 2
 	SET X, [J]
