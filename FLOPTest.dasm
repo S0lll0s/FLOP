@@ -168,7 +168,7 @@ dat 0x11111 ; header size                                                       
 ; 16-padded drive name ( "FLOP Demo Floppy" )
 dat 0x464c, 0x4f50, 0x2044, 0x656d, 0x6f20, 0x466c, 0x6f70, 0x7079, 0, 0, 0, 0, 0, 0, 0, 0 ;+ 16
 
-dat 0x12 ; filelist size
+dat 0x2 ; filelist size
 .reserve 492 ; reserved for more header data                                               ; 493
                                                                                            ;=512
                                                                                            
@@ -223,7 +223,8 @@ dat 0x1339
 
 :_sector_1438
 dat 0x1337
-.reserve 510
+dat 0x4142, 0x4344
+.reserve 508
 dat 0x1338
 
 :_sector_1439

@@ -80,3 +80,26 @@
 ;#macro scr_packed_string( string, cursor ) {
 ;	scr_packed_stringf( string, cursor, 0xf000 )
 ;}
+
+
+;#macro scr_string( string, cursor ) {
+;	scr_stringf( string, cursor, 0xf000 )
+;}
+	
+:_scr_reformat_string
+	SET PUSH, Y
+	;SET C, 0xf000 ; fi
+:_scr_reformat_string_loop
+	IFE I, J
+		SET PC, _scr_reformat_string_done
+	SET Y, [I]
+	AND Y, 0x00ff
+	IFE Y, 0
+		SET Y, 0x20
+	BOR Y, B
+	SET [I], Y
+	ADD I, 1
+	SET PC, _scr_reformat_string_loop
+:_scr_reformat_string_done
+	SET Y, POP
+	SET PC, POP

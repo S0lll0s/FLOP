@@ -28,7 +28,7 @@
     IAS _flop_interrupt
     
 	SET [0x8000], 0x2041
-
+	
 _flop_loop:
 	ADD X, 1
  	SET PC, _flop_loop
@@ -39,21 +39,86 @@ _flop_loop:
 			RFI 0
 			
 	IFE A, 0x35
-		JSR _flop_state_change
+		SET PC, _flop_state_change
 	
+	SET A, 1
+	HWI [keyboard_id]
+	
+	IFE C, 0x80
+		SET PC, _flop_uparrow
+	IFE C, 0x81
+		SET PC, _flop_downarrow
+	IFE C, 0x20
+		SET PC, _flop_key_space
+	IFE C, 0x11
+		IFG [_flop_loading], 0  ; only if loaded & printed
+			SET PC, _flop_return
+		
+	RFI 0
+
+:_flop_key_space
+	JSR _flop_wait_ready
 	SET A, 0
 	HWI [m35fd_id]    ; poll
 	
 	IFN B, 0x0001
 		RFI 0
+	
 	IFE [_flop_loading], 0
-		SET PC, _flop_load
+		JSR _flop_load
 	IFE [_flop_loading], 1
-		SET PC, _flop_print
-	IFE [_flop_loading], 2
-		SET PC, _flop_print_file
+		JSR _flop_print
+	ADD [_flop_loading], 1
 	RFI 0
 	
+:_flop_uparrow
+	SET I, Y
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET J, I
+	ADD J, 0x1f
+	SET B, 0xf000
+	JSR _scr_reformat_string
+	
+	IFE Y, 0
+		SET Y, [_flop_num_files]
+	SUB Y, 1
+	
+	SET I, Y
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET J, I
+	ADD J, 0x1f
+	SET B, 0x2000
+	JSR _scr_reformat_string
+	RFI 0
+	
+:_flop_downarrow
+	SET I, Y
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET J, I
+	ADD J, 0x1f
+	SET B, 0xf000
+	JSR _scr_reformat_string
+	
+	ADD Y, 1
+	IFE Y, [_flop_num_files]
+		SET Y, 0
+	
+	SET I, Y
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET J, I
+	ADD J, 0x1f
+	SET B, 0x2000
+	JSR _scr_reformat_string
+	RFI 0
+
+:_flop_return
+
+	SET PC, POP
+
 :_flop_state_change
 	SET J, _flop_stfu
 	SET I, 0x8040
@@ -77,18 +142,32 @@ _flop_loop:
 	SET I, 0x8040
 	SET B, 0xf000
 	JSR _scr_packed_string
-	SET PC, POP
+	
+	RFI 0
 	
 :_flop_load
 	SET [0x8001], 0x4042
 	
 	SET A, 2
-	SET X, 6
+	SET X, 0
 	SET Y, _flop_space
 	HWI [m35fd_id]
 	
-	ADD [_flop_loading], 1
-	RFI 0
+	;SET J, _flop_space
+	;ADD J, 19
+	;SET [_flop_num_files], [J] ; num file entries
+	;SET [_flop_num_files], 0x4141
+	;
+	
+	JSR _flop_wait_ready
+	
+	SET [_flop_num_files], [_flop_space+19]
+	
+	SET A, 2
+	SET X, 6
+	SET Y, _flop_space
+	HWI [m35fd_id]
+	SET PC, POP
 	
 :_flop_print
 	SET [0x8002], 0x3043
@@ -105,31 +184,64 @@ _flop_loop:
 	SET B, 0xf000
 	JSR _scr_packed_string
 	
+	ADD J, 1
+	; file size
+	ADD J, 1
+	
+	SET X, [J] ; #blocks
+	
+	ADD J, 1
+	
+	ADD J, X
+	ADD Y, 0x20
+	ADD C, 1
+	IFN C, [_flop_num_files]
+		SET PC, _flop_print_oloop
+		
+	SET Y, 1
+	JSR _flop_uparrow   ; set "cursor" to first line
+	SET PC, POP
+
+
+:_flop_load_file
+	SET Y, _flop_space
+	ADD Y, 512
+	
+	SET J, _flop_space
+	SET C, 0
+:_flop_load_oloop
+	SET I, C
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET B, 0xf000
+	JSR _scr_packed_string
 	
 	ADD J, 1
 	; file size
 	ADD J, 1
-	SET Z, 0
+	
 	SET X, [J] ; #blocks
 	
 	ADD J, 1
-	SET Z, 0
-
-:_flop_print_loop
-	IFE C, 2
-		SET PC, _flop_skip
+	
+	ADD J, X
+	ADD Y, 0x20
+	ADD C, 1
+	IFN C, [_flop_num_files]
+		SET PC, _flop_load_oloop
+	
+:_flop_load_file_loop
+	IFE C, [_flop_num_files]
+		SET PC, _flop_load_skip
+	
+	IFN C, A
+		SET PC, _flop_load_wrong
 	
 	; do something with sector [J+Z]
 	SET PUSH, X
 	SET PUSH, C
-	SET PUSH, B
-
-:_flop_print_wait_ready	
-	SET A, 0
-	HWI [m35fd_id]
-	
-	IFN B, 0x0001
-		SET PC, _flop_print_wait_ready
+	SET PUSH, A
+	JSR _flop_wait_ready
 	
 	SET A, 2
 	SET X, J
@@ -137,26 +249,25 @@ _flop_loop:
 	SET X, [X]
 	HWI [m35fd_id]
 	
-	SET B, POP
+	SET A, POP
 	SET C, POP
 	SET X, POP
-
+	
+:_flop_load_wrong
 	ADD Z, 1
 	ADD Y, 512
+	
 	IFN Z, X
-		SET PC, _flop_print_loop
-:_flop_skip	
-	IFE C, 1
-		SET PC, _flop_print_end
-			
+		SET PC, _flop_load_file_loop
+		
+:_flop_load_skip
 	ADD J, X
 	ADD Y, 0x20
 	ADD C, 1
-	SET PC, _flop_print_oloop
-	
-:_flop_print_end
-	ADD [_flop_loading], 1
-	RFI 0
+	IFN C, [_flop_num_files]
+		SET PC, _flop_load_oloop
+	JSR, _flop_print_file
+	SET PC, POP
 	
 :_flop_print_file
 	SET [0x8003], 0x5044
@@ -166,11 +277,18 @@ _flop_loop:
 	SET I, 0x8100
 	SET B, 0x2000
 	JSR _scr_packed_string
+	SET PC, POP
 	
-	ADD [_flop_loading], 1
+:_flop_wait_ready
+	SET A, 0
+	HWI [m35fd_id]
 	
-	RFI 0
+	IFN B, 0x0001
+		SET PC, _flop_wait_ready
+	SET PC, POP
 
+dat "faulheit"
+:_flop_num_files DAT 0
 :_flop_loading DAT 0
 :_flop_no_media DAT 0x4e6f, 0x206d, 0x6564, 0x6961, 0
 :_flop_ready DAT 0x5265, 0x6164, 0x7900, 0
