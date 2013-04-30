@@ -116,8 +116,11 @@ _flop_loop:
 	RFI 0
 
 :_flop_return
-
-	SET PC, POP
+	SET [0x8000], 0xf241
+	JSR _flop_load_file
+	JSR _flop_print_file
+	SET Y, 0
+	RFI 0
 
 :_flop_state_change
 	SET J, _flop_stfu
@@ -153,12 +156,6 @@ _flop_loop:
 	SET Y, _flop_space
 	HWI [m35fd_id]
 	
-	;SET J, _flop_space
-	;ADD J, 19
-	;SET [_flop_num_files], [J] ; num file entries
-	;SET [_flop_num_files], 0x4141
-	;
-	
 	JSR _flop_wait_ready
 	
 	SET [_flop_num_files], [_flop_space+19]
@@ -184,14 +181,11 @@ _flop_loop:
 	SET B, 0xf000
 	JSR _scr_packed_string
 	
+	ADD J, 1 ; file size
 	ADD J, 1
-	; file size
-	ADD J, 1
-	
 	SET X, [J] ; #blocks
 	
 	ADD J, 1
-	
 	ADD J, X
 	ADD Y, 0x20
 	ADD C, 1
@@ -204,71 +198,56 @@ _flop_loop:
 
 
 :_flop_load_file
-	SET Y, _flop_space
-	ADD Y, 512
-	
 	SET J, _flop_space
-	SET C, 0
-:_flop_load_oloop
-	SET I, C
-	MUL I, 0x20
-	ADD I, 0x8060
-	SET B, 0xf000
-	JSR _scr_packed_string
-	
-	ADD J, 1
-	; file size
-	ADD J, 1
-	
-	SET X, [J] ; #blocks
-	
-	ADD J, 1
-	
-	ADD J, X
-	ADD Y, 0x20
-	ADD C, 1
-	IFN C, [_flop_num_files]
-		SET PC, _flop_load_oloop
-	
+	SET A, 0
 :_flop_load_file_loop
-	IFE C, [_flop_num_files]
+:_flop_skip_name
+	SET B, [J]
+	IFC B, 0xff00 ; !(B & 0xff00)
+		SET PC, _flop_skip_name_after
+	IFC B, 0xff00 ; !(B & 0x00ff)
+		SET PC, _flop_skip_name_after
+	ADD J, 1
+	SET PC, _flop_skip_name
+
+:_flop_skip_name_after
+	ADD J, 1 ; file size
+	ADD J, 1 ; num blocks
+	SET C, [J]
+	
+	ADD J, 1
+	
+	SET Z, 0
+	IFN A, Y
 		SET PC, _flop_load_skip
-	
-	IFN C, A
-		SET PC, _flop_load_wrong
-	
-	; do something with sector [J+Z]
-	SET PUSH, X
-	SET PUSH, C
-	SET PUSH, A
-	JSR _flop_wait_ready
+		
+	SET Y, _flop_space + 512
+:_flop_load_segloop
+	SET [0x800f], 0x4646
 	
 	SET A, 2
-	SET X, J
-	ADD X, Z
-	SET X, [X]
+	SET X, [J]
 	HWI [m35fd_id]
 	
-	SET A, POP
-	SET C, POP
-	SET X, POP
+	JSR _flop_wait_ready
 	
-:_flop_load_wrong
+	ADD J, 1
 	ADD Z, 1
 	ADD Y, 512
 	
-	IFN Z, X
-		SET PC, _flop_load_file_loop
-		
+	IFE Z, C
+		SET PC, POP
+	;	SET PC, POP ; we're done here
+	SET PC, _flop_load_segloop
 :_flop_load_skip
-	ADD J, X
-	ADD Y, 0x20
-	ADD C, 1
-	IFN C, [_flop_num_files]
-		SET PC, _flop_load_oloop
-	JSR, _flop_print_file
-	SET PC, POP
-	
+	ADD J, C
+	ADD J, 1
+	ADD A, 1
+	IFE A, [_flop_num_files] ; not found?!
+		SET PC, POP          ; this shouldn't actually happen... ever
+	SET PC, _flop_load_file_loop
+
+
 :_flop_print_file
 	SET [0x8003], 0x5044
 	
@@ -280,11 +259,18 @@ _flop_loop:
 	SET PC, POP
 	
 :_flop_wait_ready
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, C
+:_flop_wait_ready_loop
 	SET A, 0
 	HWI [m35fd_id]
 	
 	IFN B, 0x0001
-		SET PC, _flop_wait_ready
+		SET PC, _flop_wait_ready_loop
+	SET C, POP
+	SET B, POP
+	SET A, POP
 	SET PC, POP
 
 dat "faulheit"

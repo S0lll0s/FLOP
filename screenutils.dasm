@@ -51,7 +51,7 @@
 	ADD I, 1
 	
 	SET Y, [J]  ; low byte
-    AND Y, 0x7f ; clear our high byte
+    AND Y, 0x7f ; clear out high byte
   
     IFE Y, 0
 		SET PC, _scr_packed_string_done

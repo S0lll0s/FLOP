@@ -163,7 +163,7 @@ dat 1439, _sector_1439
 dat 0x8adf ; FLOP magic number (0x8adf)                                                    ;+  1
 dat 0x0001 ; version                                                                       ;+  1
 
-dat 0x11111 ; header size                                                                  ;+  1
+dat 0x1111 ; header size                                                                  ;+  1
 
 ; 16-padded drive name ( "FLOP Demo Floppy" )
 dat 0x464c, 0x4f50, 0x2044, 0x656d, 0x6f20, 0x466c, 0x6f70, 0x7079, 0, 0, 0, 0, 0, 0, 0, 0 ;+ 16
