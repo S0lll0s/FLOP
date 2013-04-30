@@ -32,7 +32,7 @@ Header
  |          |                                    |     |
  |   16 w   | drive name (0-padd, packed string) |     |
  |          |                                    |     |
- |   1 w    | filelist size (words)              |     |
+ |   1 w    | number of file entries             |     |
  |          |                                    |     |
  |  492 w   | reserved for more header data      |  ---/
  |-----------------------------------------------|
