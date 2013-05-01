@@ -41,8 +41,8 @@ Header
  |  512 w   |             per block              |  ---/
  |-----------------------------------------------|
  |  512 w   | file list (alphabetic order)       |  ---\
- |  512 w   . file list (alphabetic order)       |     .
- |  512 w   . file list (alphabetic order)       |     .- blocks 4 .. n
+ |  512 w   . file list (alphabetic order)       |     |
+ |  512 w   . file list (alphabetic order)       |     | - blocks 7 .. n
  |  512 w   | file list (alphabetic order)       |  ---/
  |__________|____________________________________|
  ``` 
