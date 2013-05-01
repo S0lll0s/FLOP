@@ -26,8 +26,15 @@
     HWI [m35fd_id]    ; interrupt 0x35 means floppy state change
     
     IAS _flop_interrupt
-    
-	SET [0x8000], 0x2041
+	SET [0x8020], 0x2041 ; A
+	
+	JSR _flop_wait_ready
+	JSR _flop_load
+	SET [0x8021], 0x4042 ; B
+	
+	JSR _flop_wait_ready
+	JSR _flop_print
+	SET [0x8022], 0x3043 ; C
 	
 _flop_loop:
 	ADD X, 1
@@ -48,76 +55,41 @@ _flop_loop:
 		SET PC, _flop_uparrow
 	IFE C, 0x81
 		SET PC, _flop_downarrow
-	IFE C, 0x20
-		SET PC, _flop_key_space
+	;IFE C, 0x20
+	;	SET PC, _flop_key_space
 	IFE C, 0x11
-		IFG [_flop_loading], 0  ; only if loaded & printed
-			SET PC, _flop_return
+		SET PC, _flop_return
 		
-	RFI 0
-
-:_flop_key_space
-	JSR _flop_wait_ready
-	SET A, 0
-	HWI [m35fd_id]    ; poll
-	
-	IFN B, 0x0001
-		RFI 0
-	
-	IFE [_flop_loading], 0
-		JSR _flop_load
-	IFE [_flop_loading], 1
-		JSR _flop_print
-	ADD [_flop_loading], 1
 	RFI 0
 	
 :_flop_uparrow
-	SET I, Y
-	MUL I, 0x20
-	ADD I, 0x8060
-	SET J, I
-	ADD J, 0x1f
-	SET B, 0xf000
-	JSR _scr_reformat_string
+	SET B, 0xf000	
+	JSR _flop_reformat_line
 	
 	IFE Y, 0
 		SET Y, [_flop_num_files]
 	SUB Y, 1
 	
-	SET I, Y
-	MUL I, 0x20
-	ADD I, 0x8060
-	SET J, I
-	ADD J, 0x1f
-	SET B, 0x2000
-	JSR _scr_reformat_string
+	SET B, 0x2800
+	JSR _flop_reformat_line
 	RFI 0
 	
 :_flop_downarrow
-	SET I, Y
-	MUL I, 0x20
-	ADD I, 0x8060
-	SET J, I
-	ADD J, 0x1f
-	SET B, 0xf000
-	JSR _scr_reformat_string
+	SET B, 0xf000	
+	JSR _flop_reformat_line
 	
 	ADD Y, 1
 	IFE Y, [_flop_num_files]
 		SET Y, 0
 	
-	SET I, Y
-	MUL I, 0x20
-	ADD I, 0x8060
-	SET J, I
-	ADD J, 0x1f
-	SET B, 0x2000
-	JSR _scr_reformat_string
+	SET B, 0x2800
+	JSR _flop_reformat_line
 	RFI 0
 
 :_flop_return
 	JSR _flop_load_file
 	JSR _flop_print_file
+	SET [0x8023], 0x5044 ; D
 	SET Y, 1
 	JSR _flop_uparrow
 	RFI 0
@@ -149,14 +121,21 @@ _flop_loop:
 	RFI 0
 	
 :_flop_load
-	SET [0x8001], 0x4042
-	
 	SET A, 2
 	SET X, 0
 	SET Y, _flop_space
 	HWI [m35fd_id]
 	
 	JSR _flop_wait_ready
+	
+	SET J, _flop_empty
+	SET I, 0x8000
+	SET B, 0xa800
+	JSR _scr_packed_string
+	
+	SET J, _flop_space + 3
+	SET I, 0x8000
+	JSR _scr_packed_string
 	
 	SET [_flop_num_files], [_flop_space+19]
 	
@@ -167,8 +146,6 @@ _flop_loop:
 	SET PC, POP
 	
 :_flop_print
-	SET [0x8002], 0x3043
-	
 	SET Y, _flop_space
 	ADD Y, 512
 	
@@ -248,13 +225,21 @@ _flop_loop:
 
 
 :_flop_print_file
-	SET [0x8003], 0x5044
-	
 	SET J, _flop_space
 	ADD J, 512
 	SET I, 0x8100
 	SET B, 0x2000
 	JSR _scr_packed_string
+	SET PC, POP
+
+; helpers
+:_flop_reformat_line
+	SET I, Y
+	MUL I, 0x20
+	ADD I, 0x8060
+	SET J, I
+	ADD J, 0x20
+	JSR _scr_reformat_string
 	SET PC, POP
 	
 :_flop_wait_ready
@@ -280,6 +265,7 @@ dat "faulheit"
 :_flop_ready_wp DAT 0x5265, 0x6164, 0x7920, 0x2857, 0x5029, 0
 :_flop_busy DAT 0x4275, 0x7379, 0
 :_flop_stfu DAT 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0
+:_flop_empty DAT 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0x2020, 0
 
 
 ; hardware enumeration
