@@ -1,7 +1,7 @@
 FLOP
 ====
 
-The FLOP filesystem is designed for the use with the Mackapar 3.5" Floppy Drive (M35FD).
+The FLOP filesystem is a Filesystem designed for use with the Mackapar 3.5" Floppy Drive (M35FD).
 
 
 Specification [*(gist)*](https://gist.github.com/S0lll0s/5446051#file-flop-specification-draft-1)
