@@ -103,10 +103,19 @@ _flop_loop:
 	HWI [m35fd_id]
 	
 	JSR _flop_wait_ready
-	SET A, 3
 	SET X, 1
 	SET Y, _flop_blocklist
 	HWI [m35fd_id]
+	
+	SET Y, _flop_empty
+:_flop_file_loop
+	JSR _flop_wait_ready
+	ADD X, 1
+	HWI [m35fd_id]  ; clear rest of block list blocks
+	IFN X, 7        ; and first file
+		SET PC, _flop_file_Loop
+		
+	
 	
 	JSR _flop_wait_ready
 	SET J, _flop_done
@@ -215,4 +224,6 @@ _flop_loop:
 	
 .include "hwenum.dasm"
 .include "screenutils.dasm"
-	
+
+:_flop_empty
+	.reserve 512
