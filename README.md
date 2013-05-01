@@ -24,9 +24,9 @@ Header
  +----------+------------------------------------+
  |   size   |   description                      |
  +----------+------------------------------------+
- |   1 w    | FLOP magic number (0x8adf)         |  ---\
+ |   1 w    | FLOP magic number (0x83df)         |  ---\
  |          |                                    |     |
- |   1 w    | version                            |     |
+ |   1 w    | version (0x0001)                   |     |
  |          |                                    |     |
  |   1 w    | header size                        |     |- block 0
  |          |                                    |     |

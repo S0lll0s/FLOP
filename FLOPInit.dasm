@@ -158,7 +158,7 @@ _flop_loop:
 	SET PC, POP
 	
 :_flop_space
-	dat 0x8adf   ; magic number
+	dat 0x83df   ; magic number
 	dat 0x0001   ; version 1
 	dat 0x0000   ; header size - we don't care
 :_flop_name

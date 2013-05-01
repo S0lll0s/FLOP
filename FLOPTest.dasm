@@ -160,7 +160,7 @@ dat 1438, _sector_1438
 dat 1439, _sector_1439
 
 :_sector_zero
-dat 0x8adf ; FLOP magic number (0x8adf)                                                    ;+  1
+dat 0x83df ; FLOP magic number (0x8adf)                                                    ;+  1
 dat 0x0001 ; version                                                                       ;+  1
 
 dat 0x1111 ; header size                                                                  ;+  1
