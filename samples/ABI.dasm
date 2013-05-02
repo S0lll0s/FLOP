@@ -1,0 +1,30 @@
+; *************************
+; Project: FLOP
+; File: ABI.dasm
+; *************************
+
+; AtlasOS Binary Interface Executable
+; (https://github.com/0x10cAtlas/AtlasOS/blob/master/ABI.txt)
+
+; header
+:head_start
+dat 0x4714 ; magic number
+dat 0x0001 ; version
+dat main - head_start ; header length
+dat end - main        ; code & data length
+dat 0x0001 ; no lib etc
+
+; relocation table
+dat 1       ; num entries
+dat fix + 1 ; fixup #1
+
+; code & data section
+:main
+	SET A, [0x8082]
+	ADD A, 1
+	AND A, 0x7f
+	BOR A, 0xf000
+	SET [0x8082], A
+:fix
+	SET PC, main
+:end

@@ -1,0 +1,149 @@
+; *************************
+; Project: FLOP
+; File: ABILoader.dasm
+; *************************
+;
+; Loads an ABI (Atlas OS Binary) from an adress
+;
+; See the ABI Specification here: https://github.com/0x10cAtlas/AtlasOS/blob/master/ABI.txt
+
+:_main
+
+	SET C, hwenum_targets
+ 	SET Y, 4
+	JSR _hwenum
+    
+    SET A, 3
+    SET B, 2          ; interrupts with message 2 mean key event
+    HWI [keyboard_id]
+    
+	SET A, 0
+	SET B, 0x8000     ; map screen to 8000
+	HWI [lem1802_id]
+	
+	SET [0x8000], 0x2041
+	
+	SET PUSH, abi_sample
+	JSR _flop_load_abi
+	IFN A, 0x00001 ; OK
+		SET PC, _fail
+	SET PC, B
+	SUB PC, 1
+	
+:_fail
+	SET [0x8002], 0xf0043
+	SUB PC, 1
+
+; FLOP_load_abi
+; takes the adress of an ABI from the stack and loads it
+; sets A to the status and B to the entry point
+; statuses:
+; 	0x0000 - FLOP_ABI_UNKNOWN
+;	0x0001 - FLOP_ABI_OK
+;	0x0002 - FLOP_ABI_INVALID
+;	0x0003 - FLOP_ABI_VERSION_NOT_SUPPORTED
+
+:_flop_load_abi
+	SET B, POP
+	SET A, POP ; adress of the ABI
+	SET C, A
+	SET PUSH, B
+	
+	IFN [A], 0x4714 ; magic number
+		SET PC, _flop_load_abi_invalid
+		
+	ADD A, 1
+	IFN [A], 0x0001 ; version
+		SET PC, _flop_load_abi_wrong_version
+	
+	ADD A, 1 ; header length
+	SET B, C
+	ADD B, [A]
+	ADD A, 1 ; code & data length
+	ADD A, 1 ; flags
+	
+	ADD A, 1
+	SET I, [A] ; relocation table entries
+	SET J, 0
+:_flop_load_abi_reloc_loop
+	SET X, [A] ; fixit
+	ADD [X], C
+	ADD J, 1
+	ADD A, 1
+	IFN J, I
+		SET PC, _flop_load_abi_reloc_loop
+	SET A, 0x0001 ; FLOP_ABI_OK
+	SET PC, POP
+	
+:_flop_load_abi_invalid
+	SET A, 0x0002 ; FLOP_ABI_INVALID
+	SET PC, POP
+	
+:_flop_load_abi_wrong_version
+	SET A, 0x0003 ; FLOP_ABI_VERSION_NOT_SUPPORTED
+	SET PC, POP
+
+
+; hardware enumeration
+:setup_keyboard
+            SET [keyboard_id], I   ; I holds the hardware ID, alternatively check hwenum_targets + 3
+            SET PC, POP            ; Identified handlers need to pop PC
+
+            
+:setup_lem1802
+    		SET [lem1802_id], I
+            SET PC, POP
+            
+:setup_m35fd
+    		SET [m35fd_id], I
+            SET PC, POP
+
+:setup_unknown
+            SET PC, POP
+
+
+:keyboard_id DAT 0xffff
+:m35fd_id    DAT 0xffff
+:lem1802_id  DAT 0xffff
+
+:hwenum_targets
+	DAT setup_unknown                           ; Start with one word address to the unknown setup routine
+	DAT 0x30cf, 0x7406, 0xffff, setup_keyboard  ; one hardware setup is 4 words long
+	DAT 0x7349, 0xf615, 0xffff, setup_lem1802   ; Format: 4 higher ID bits, 4 lower ID bits, recognized
+	DAT 0x4fd5, 0x24c5, 0xffff, setup_m35fd
+	
+.include "../include/hwenum.dasm"
+.include "../include/screenutils.dasm"
+
+:_flop_empty
+	.reserve 512
+
+
+:abi_sample
+dat 0x4714 ; magic number
+dat 0x0001 ; version
+dat abi_main - abi_sample ; header length
+dat abi_end - abi_main    ; code & data length
+dat 0x0001 ; no lib etc
+
+; relocation table
+dat 2       ; num entries
+dat abi_fix1 + 1 ; fixup #1, +1 b/c the 2nd word of SET is the adress
+dat abi_main + 1 ; fixup #2, +1 b/c the 2nd word of IAS is the adress
+
+; code & data section
+:abi_main
+	IAS abi_handler
+:abi_loop
+	SET A, [0x8082]
+	ADD A, 1
+	AND A, 0x7f
+	BOR A, 0xf000
+	SET [0x8082], A
+:abi_fix1
+	SET PC, abi_loop
+	
+:abi_handler
+	SET [0x8020], 0xf041
+	RFI 0
+:abi_end
