@@ -147,8 +147,8 @@ _flop_loop:
 	DAT 0x4fd5, 0x24c5, 0xffff, setup_m35fd
 	
 	
-.include "hwenum.dasm"
-.include "screenutils.dasm"
+.include "../include/hwenum.dasm"
+.include "../include/screenutils.dasm"
 
 :_sector_table
 dat 0, _sector_zero

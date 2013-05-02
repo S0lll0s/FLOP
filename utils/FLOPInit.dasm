@@ -219,8 +219,8 @@ _flop_loop:
 	DAT 0x7349, 0xf615, 0xffff, setup_lem1802   ; Format: 4 higher ID bits, 4 lower ID bits, recognized
 	DAT 0x4fd5, 0x24c5, 0xffff, setup_m35fd
 	
-.include "hwenum.dasm"
-.include "screenutils.dasm"
+.include "../include/hwenum.dasm"
+.include "../include/screenutils.dasm"
 
 :_flop_empty
 	.reserve 512

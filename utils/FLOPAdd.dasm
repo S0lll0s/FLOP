@@ -315,8 +315,8 @@ dat "faulheit"
 	DAT 0x12d0, 0xb402, 0xffff, setup_clock     ; hardware ID (default 0xffff), last address to hwhandler
 	DAT 0x4fd5, 0x24c5, 0xffff, setup_m35fd
 	
-.include "hwenum.dasm"
-.include "screenutils.dasm"
+.include "../include/hwenum.dasm"
+.include "../include/screenutils.dasm"
 
 dat "PERN"
 :_flop_space
