@@ -114,9 +114,7 @@ _flop_loop:
 	HWI [m35fd_id]  ; clear rest of block list blocks
 	IFN X, 7        ; and first file
 		SET PC, _flop_file_Loop
-		
-	
-	
+
 	JSR _flop_wait_ready
 	SET J, _flop_done
 	SET I, 0x8080
@@ -208,7 +206,6 @@ _flop_loop:
             SET PC, POP
 
 :setup_unknown
-    		SET [m35fd_id], I
             SET PC, POP
 
 

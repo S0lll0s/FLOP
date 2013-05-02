@@ -300,7 +300,6 @@ dat "faulheit"
             SET PC, POP
 
 :setup_unknown
-    		SET [m35fd_id], I
             SET PC, POP
 
 
